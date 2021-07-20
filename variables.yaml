@@ -1,0 +1,37 @@
+all:
+  hosts:
+    localhost:
+      test1_var_secret: "Hello World"
+      
+      test2_var_secret:
+        - "I'm"
+        - "A"
+        - "List"
+
+      test3_var_secret: "HIDE_ME"
+      test3_var_show: "SHOW_ME"
+
+      test4_var_nested:
+        - "Hardcoded list entry"
+        - "{{ test4_var_secret }}"
+      test4_var_secret: "A vaulted list item"
+
+      test5_var_secret: "Gibberish"
+
+      test6_var_secret: "More Gibberish"
+
+      test7_var_secret: "A secret"
+      
+      test8_var_secret: true
+
+      test_site: "amazon.com"
+
+      vault_address: http://127.0.0.1:8200
+
+      vault_token: root
+
+      vault_skip_verify: true
+
+      container_name: hcvault1
+
+      vault_location: test

@@ -1,0 +1,151 @@
+---
+- hosts: localhost
+  connection: local
+  environment: 
+    VAULT_ADDR: http://127.0.0.1:8200
+    VAULT_TOKEN: root
+    VAULT_SKIP_VERIFY: true
+
+  tasks:
+    - name: "Test 1: print a variable"
+      debug:
+        var: test1_var_secret
+
+    - name: "Test 2: print a list variable"
+      debug:
+        var: test2_var_secret
+
+    - name: "Test 3: print a message using variables"
+      debug:
+        msg: "The value of {{ test3_var_secret }} should be in the vault but {{ test3_var_show }} can be shown"
+
+    - name: "Test 4: print a variable that contains another var"
+      debug:
+        var: test4_var_nested
+
+    - name: "Test 5: use secret as part of a command"
+      command: echo {{ test5_var_secret }}
+      register: test5_output
+
+    - name: "Test 5: print output"
+      debug:
+        var: test5_output
+
+    - name: "Test 6: use secret as part of a command arg"
+      command: 
+        argv: 
+          - echo
+          - "{{ test6_var_secret }}"
+      register: test6_output
+
+    - name: "Test 6: print output"
+      debug:
+        var: test6_output
+
+    - name: "Test 8: use a vault var as a conditional"
+      debug:
+        msg: "TEST 8"
+      when:
+        - test8_var_secret
+
+    - name: "Testing connection things"
+      command: dig {{ test_site }}
+      register: connect_output
+
+    - name: "printing connection output"
+      debug:
+        var: connect_output.stdout
+
+    - name: "checking on vault"
+      command: vault --help
+      register: check_vault
+
+    - name: "Print vault help output"
+      debug:
+        var: check_vault.stdout
+
+    - name: "checking on docker"
+      command: docker -h
+      register: docker_help
+
+    - name: "print docker help output"
+      debug:
+        var: docker_help.stdout
+    
+    - name: "create container for docker to run vault on"
+      command: docker create --name {{ container_name }} --net=vaultnet -p 8200:8200 -h vaultsvr -e VAULT_ADDR={{ vault_address }} -e VAULT_TOKEN={{ vault_token }} -v $WORKDIR/plugins:/vault/plugins hashicorp/vault-enterprise:1.7.1_ent server -dev -dev-plugin-dir=/vault/plugins -dev-root-token-id=root
+      register: docker_container
+
+    - name: "print container for docker output"
+      debug:
+        var: docker_container.stdout
+
+    - name: "start docker container hcvault1"
+      command: docker start {{ container_name }}
+      register: docker_start
+
+    - name: "print start docker output"
+      debug:
+        var: docker_start.stdout
+
+    - name: "get all running docker containers"
+      command: docker container ls
+      register: docker_ls
+
+    - name: "printing all running docker containers"
+      debug:
+        var: docker_ls.stdout
+
+    - name: "Login to vault"
+      command: vault login {{ vault_token }} -address={{ vault_address }}
+      register: log_vault
+
+    - name: "print login output"
+      debug:
+        var: log_vault.stdout
+
+    - name: "enable kv engine on the vault server"
+      command: vault secrets enable kv
+      register: enable_kv
+
+    - name: "print if kv vault is enabled"
+      debug: 
+        var: enable_kv.stdout
+
+    - name: "write a secret to vault"
+      command: vault kv put kv/{{ vault_location }} {{ test3_var_show }}={{ test3_var_secret }} 
+      register: write_vault
+
+    - name: "print write response"
+      debug:
+        var: write_vault.stdout
+
+    - name: "collect secret from vault"
+      command: vault kv get kv/{{ vault_location }} 
+      register: get_vault
+
+    - name: "print get response"
+      debug: 
+        var: get_vault.stdout
+
+    - name: "stop docker instance of vault"
+      command: docker stop {{ container_name }}
+
+    - name: "remove docker container of vault"
+      command: docker rm {{ container_name }}
+
+    - name: "checking that the docker container is fully removed"
+      command: docker container ls
+      register: docker_ls_end
+    
+    - name: "results of checking that all containers are closed"
+      debug:
+        var: docker_ls_end
+    
+    - name: "Finishing up this script"
+      command: echo "Hooray! I finished running and I ran into no errors!"
+      register: eof
+
+    - name: "Finishing"
+      debug:
+        var: eof.stdout
